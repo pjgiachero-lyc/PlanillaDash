@@ -1,0 +1,56 @@
+═══════════════════════════════════════════════
+  CÓMO PUBLICAR EN RAILWAY
+═══════════════════════════════════════════════
+
+PASO 1 — Subir a GitHub
+────────────────────────
+1. Entrá a github.com/new
+2. Nombre: PlanillaDash → Private → Create
+3. Subí TODOS estos archivos (menos credentials.json):
+   - index.html
+   - server.py
+   - requirements.txt
+   - Procfile
+   - INICIAR.bat
+
+   ⚠️  NO subas credentials.json a GitHub (es secreto)
+
+PASO 2 — Deploy en Railway
+───────────────────────────
+1. Entrá a railway.app → Login with GitHub
+2. New Project → Deploy from GitHub repo → PlanillaDash
+3. Esperás que termine el deploy
+
+PASO 3 — Agregar las credenciales de Google (MUY IMPORTANTE)
+──────────────────────────────────────────────────────────────
+1. En Railway, entrá a tu proyecto → Variables
+2. Creá una variable nueva:
+   - Nombre:  GOOGLE_CREDENTIALS
+   - Valor:   (pegá TODO el contenido de tu credentials.json)
+
+   Para copiar el contenido:
+   → Abrí credentials.json con el Bloc de notas
+   → Ctrl+A para seleccionar todo
+   → Ctrl+C para copiar
+   → Pegalo como valor de la variable en Railway
+
+3. Railway se reinicia solo con las credenciales
+
+PASO 4 — Tu URL pública
+────────────────────────
+Railway te da una URL tipo:
+   planilladash-production.up.railway.app
+
+Compartila con tu equipo. Todos pueden verla sin instalar nada.
+
+═══════════════════════════════════════════════
+  USO DIARIO
+═══════════════════════════════════════════════
+
+Para agregar una planilla nueva:
+1. Entrás a drive.google.com
+2. Abrís la carpeta "planillas_dash"
+3. Subís el archivo .xlsx
+4. En el dashboard hacés clic en "Actualizar lista"
+5. Listo — aparece en la lista para seleccionar
+
