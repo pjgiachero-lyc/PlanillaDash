@@ -336,7 +336,7 @@ async function refreshFileList() {
       `${files.length} archivo${files.length>1?'s':''} encontrado${files.length>1?'s':''}`;
   } catch(e) {
     document.getElementById('fileList').innerHTML =
-      `<div class="empty-sidebar"><div class="big">⚠️</div>Error: ${e.message}<br><br>URL: ${SERVER}/api/files</div>`;
+      `<div class="empty-sidebar"><div class="big">⚠️</div>No se pudo conectar al servidor.<br><br>Asegurate de que el servidor esté corriendo</div>`;
     document.getElementById('sbStatus').textContent = 'Error de conexión';
     console.error('fetch error:', e);
   }
@@ -375,6 +375,15 @@ function updateSelectedStatus() {
     n === 0 ? 'Ninguna seleccionada' :
     n === 1 ? '1 semana seleccionada' :
     `${n} semanas seleccionadas`;
+  // Update FAB
+  const fab = document.getElementById('fabBtn');
+  const cnt = document.getElementById('fabCount');
+  if(fab && cnt){
+    cnt.textContent = n > 0 ? n : '';
+    cnt.style.display = n > 0 ? 'inline' : 'none';
+  }
+  // Auto-close sidebar on mobile after selection
+  if(isMobile && isMobile() && n > 0) setTimeout(closeSidebar, 300);
 }
 
 // ════════════════════════════════════════
@@ -796,17 +805,7 @@ function updateFab(){
 window.addEventListener('resize', setupMobile);
 
 // Patch renderAll to also update FAB
-const _origRenderAll = renderAll;
-// Override updateSelectedStatus to update FAB too
-const _origUpdateSelected = updateSelectedStatus;
-function updateSelectedStatus(){
-  _origUpdateSelected();
-  updateFab();
-  // Auto-close sidebar on mobile after selection
-  if(isMobile() && S.selected.length > 0){
-    setTimeout(closeSidebar, 300);
-  }
-}
+// updateSelectedStatus already handles FAB and mobile close
 
 // ════════════════════════════════════════
 //  INIT
