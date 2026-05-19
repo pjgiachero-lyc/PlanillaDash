@@ -336,8 +336,9 @@ async function refreshFileList() {
       `${files.length} archivo${files.length>1?'s':''} encontrado${files.length>1?'s':''}`;
   } catch(e) {
     document.getElementById('fileList').innerHTML =
-      `<div class="empty-sidebar"><div class="big">⚠️</div>No se pudo conectar al servidor.<br><br>Asegurate de que el servidor esté corriendo</div>`;
+      `<div class="empty-sidebar"><div class="big">⚠️</div>Error: ${e.message}<br><br>URL: ${SERVER}/api/files</div>`;
     document.getElementById('sbStatus').textContent = 'Error de conexión';
+    console.error('fetch error:', e);
   }
 }
 
