@@ -253,7 +253,7 @@ const S = {
 const COLORS = ['#4f8cff','#2dd4ac','#7c5cfc','#f97316','#f43f5e','#facc15','#38bdf8','#a78bfa'];
 const charts = {};
 let ventasType='bar', topsType='bar';
-const SERVER = 'http://localhost:8765';
+const SERVER = window.location.hostname === 'localhost' ? 'http://localhost:8765' : '';
 
 // ════════════════════════════════════════
 //  FILE LIST (from server)
