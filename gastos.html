@@ -315,18 +315,17 @@ async function toggleFile(key,filename) {
 // ── PARSER ──
 function parseGastos(rows, filename) {
   let weekLabel='';
-  for(let r=0;r<rows.length;r++){
-    for(let c=0;c<(rows[r]||[]).length;c++){
-      const v=String(rows[r][c]||'');
-      const m=v.match(/(\d+\/\d+.*?\d+\/\d+)/);
-      if(m){weekLabel=m[1];break;}
-    }
-    if(weekLabel) break;
-  }
-  if(!weekLabel) weekLabel=filename.replace(/\.xlsx?$/i,'').replace('planilla_semanal_','');
+  // Try to get week label from filename
+  const m2=filename.replace(/\.xlsx?$/i,'').match(/(\d+[-_]\d+[-_]\d+)/);
+  if(m2) weekLabel=m2[1].replace(/_/g,'-');
+  else weekLabel=filename.replace(/\.xlsx?$/i,'').replace('planilla_semanal_','');
 
   const days=[];
   let currentDay=null;
+
+  // Words that indicate movements that are NOT real expenses
+  const SKIP_CONCEPTS = ['sobrante caja','ingreso caja','faltante caja','retiro caja'];
+  function isSkip(c){ return SKIP_CONCEPTS.some(s=>c.toLowerCase().includes(s)); }
 
   for(let r=0;r<rows.length;r++){
     const row=rows[r]||[];
@@ -336,48 +335,65 @@ function parseGastos(rows, filename) {
     const col3=parseFloat(row[3])||0; // $ EFT
     const col4=parseFloat(row[4])||0; // $ MP
 
-    // New day row: col0 is a number (Excel date serial) and col1 has day name
-    if(col0&&!isNaN(parseFloat(col0))&&parseFloat(col0)>40000&&col1&&col1.includes('-')){
-      const ventas=parseFloat(row[6])||0;
-      const vEft=parseFloat(row[7])||0;
-      const vMP=parseFloat(row[8])||0;
+    // ── NEW DAY ROW: col0 is a JS Date object (xlsx parses it) OR col1 has day name with '-'
+    const isDateObj = col0 instanceof Date || (col0 && typeof col0==='object');
+    const isDayRow = (isDateObj || (col0&&!isNaN(col0)&&Number(col0)>40000)) && col1 && col1.includes('-');
+
+    if(isDayRow){
+      // ventas data is in cols 6-10 of same row
+      const ventas=parseFloat(row[8])||0;   // col I = TOTAL ventas
+      const vEft=parseFloat(row[9])||0;     // col J = EFT ventas
+      const vMP=parseFloat(row[10])||0;     // col K = MP ventas (tarjeta)
       currentDay={
-        label:col1, // e.g. "Lunes - NOCHE"
-        turno:col1.includes('NOCHE')?'NOCHE':'DIA',
+        label:col1,
+        turno:col1.toUpperCase().includes('NOCHE')?'NOCHE':'DIA',
         gastos:[],
         totalEft:0, totalMP:0,
         ventas, vEft, vMP,
-        inicioCaja:parseFloat(row[11])||0,
-        dejaCaja:parseFloat(row[12])||0,
-        retiroCaja:parseFloat(row[13])||0,
-        quien:String(row[14]||'').trim(),
+        inicioCaja:0, dejaCaja:0, retiroCaja:0, quien:'',
       };
       days.push(currentDay);
-      // First gasto on same row
-      if(col2&&col2!=='0'&&col2!=='GASTOS'&&(col3!==0||col4!==0)){
-        currentDay.gastos.push({concepto:col2,eft:col3,mp:col4});
-        currentDay.totalEft+=col3;
-        currentDay.totalMP+=col4;
+      // First gasto on same row (col2 = concepto, col3 = eft, col4 = mp)
+      if(col2 && col2!=='0' && col2!=='GASTOS' && !isSkip(col2) && (col3>0||col4>0)){
+        currentDay.gastos.push({concepto:col2, eft:Math.max(0,col3), mp:Math.max(0,col4)});
+        currentDay.totalEft+=Math.max(0,col3);
+        currentDay.totalMP+=Math.max(0,col4);
       }
       continue;
     }
 
-    // Gasto row (col0 empty, col2 has concepto)
-    if(currentDay&&!col0&&col2&&col2!=='0'&&(col3!==0||col4!==0)){
-      currentDay.gastos.push({concepto:col2,eft:col3,mp:col4});
-      currentDay.totalEft+=col3;
-      currentDay.totalMP+=col4;
+    // ── TOTALS ROW: col0 null, col1 null, col2 null → has totals in col3/col4 and caja data
+    if(currentDay && !col0 && !col1 && !col2 && (col3!==0||col4!==0||parseFloat(row[8])||0)){
+      // This is the summary row — grab caja data
+      currentDay.inicioCaja = parseFloat(row[12])||0;
+      currentDay.dejaCaja   = Math.abs(parseFloat(row[13])||0);
+      currentDay.retiroCaja = parseFloat(row[14])||0;
+      currentDay.quien      = String(row[16]||'').trim();
+      // Use the totals from this row (they're the authoritative sums)
+      currentDay.totalEft   = Math.max(0, parseFloat(row[3])||0);
+      currentDay.totalMP    = Math.max(0, parseFloat(row[4])||0);
+      // Recalculate gastos to match (remove negatives already excluded above)
+      continue;
+    }
+
+    // ── GASTO ROW: col0 null, col2 has concepto, values > 0
+    if(currentDay && !col0 && col2 && col2!=='0' && !isSkip(col2)){
+      const eft=Math.max(0,col3);
+      const mp=Math.max(0,col4);
+      if(eft>0||mp>0){
+        currentDay.gastos.push({concepto:col2, eft, mp});
+        // Don't add to totals here — we use the totals row values instead
+      }
     }
   }
 
   if(!days.length) return null;
 
-  // Totals
   const totalEft=days.reduce((s,d)=>s+d.totalEft,0);
   const totalMP=days.reduce((s,d)=>s+d.totalMP,0);
   const totalVentas=days.reduce((s,d)=>s+d.ventas,0);
 
-  return {label:weekLabel,filename,days,totalEft,totalMP,totalVentas};
+  return {label:weekLabel, filename, days, totalEft, totalMP, totalVentas};
 }
 
 // ── HELPERS ──
