@@ -89,7 +89,7 @@ const PASS = 'limonychimi2026';
 function doLogin() {
   const val = document.getElementById('passInput').value;
   if (val === PASS) {
-    sessionStorage.setItem('lyc_auth', '1');
+    localStorage.setItem('lyc_auth', '1');
     showMenu();
   } else {
     document.getElementById('loginError').textContent = 'Contraseña incorrecta';
@@ -99,7 +99,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  sessionStorage.removeItem('lyc_auth');
+  localStorage.removeItem('lyc_auth');
   document.getElementById('menuWrap').style.display = 'none';
   document.getElementById('loginWrap').style.display = 'block';
   document.getElementById('passInput').value = '';
@@ -111,7 +111,7 @@ function showMenu() {
 }
 
 // Auto-show menu if already logged in
-if (sessionStorage.getItem('lyc_auth') === '1') showMenu();
+if (localStorage.getItem('lyc_auth') === '1') showMenu();
 </script>
 </body>
 </html>

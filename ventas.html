@@ -188,7 +188,7 @@ td.worst{color:var(--a5)}
 <body>
 <script>
 // Auth check
-if (sessionStorage.getItem('lyc_auth') !== '1') {
+if (localStorage.getItem('lyc_auth') !== '1') {
   window.location.href = '/';
 }
 </script>

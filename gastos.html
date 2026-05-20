@@ -110,7 +110,7 @@ td.hi{color:var(--a5);font-weight:600}
 </style>
 </head>
 <body>
-<script>if(sessionStorage.getItem('lyc_auth')!=='1')window.location.href='/';</script>
+<script>if(localStorage.getItem('lyc_auth')!=='1')window.location.href='/';</script>
 
 <div id="overlay" onclick="closeSidebar()"></div>
 <button id="fabBtn" onclick="toggleSidebar()">💸 Semanas <span id="fabCount" style="display:none;background:rgba(255,255,255,.25);border-radius:20px;padding:2px 7px;font-size:.75rem"></span></button>
