@@ -103,8 +103,11 @@ class Handler(SimpleHTTPRequestHandler):
                 self.end_headers()
             return
 
+        # Redirigir / a index.html, y servir .html sin extensión
         if self.path == "/":
             self.path = "/index.html"
+        elif self.path in ("/ventas", "/gastos"):
+            self.path = self.path + ".html"
         super().do_GET()
 
     def log_message(self, fmt, *args):
