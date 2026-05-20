@@ -139,6 +139,12 @@ td.hi{color:var(--a5);font-weight:600}
 
   <div id="dashboard" style="display:none">
 
+    <div class="compare-bar" id="compareBar" style="display:none">
+      <input type="checkbox" id="cmpToggle" onchange="renderAll()">
+      <label for="cmpToggle"><strong>Modo comparación</strong></label>
+      <span>— superponé semanas en los gráficos</span>
+    </div>
+
     <div class="filters">
       <div class="fg">
         <label>Turno</label>
@@ -224,7 +230,7 @@ td.hi{color:var(--a5);font-weight:600}
 <script>
 const SERVER = window.location.hostname==='localhost'?'http://localhost:8765':'';
 const COLORS = ['#f43f5e','#f97316','#facc15','#4f8cff','#2dd4ac','#7c5cfc','#38bdf8','#a78bfa'];
-const S = { available:[], loaded:{}, selected:[], activeKey:null, fTurno:'', fPago:'' };
+const S = { available:[], loaded:{}, selected:[], activeKey:null, fTurno:'', fPago:'', compareMode:false };
 const charts = {};
 let diasType='bar', topsType='bar';
 
@@ -472,31 +478,87 @@ function setCT(id,t,btn){
 function renderDiasChart(){
   dc('dias');
   const ctx=document.getElementById('cDias').getContext('2d');
-  const w=getActive();if(!w)return;
-  const days=getFilteredDays(w);
-  const labels=days.map(d=>d.label.replace(' - ',' '));
-  const eft=days.map(d=>S.fPago==='mp'?0:d.totalEft);
-  const mp=days.map(d=>S.fPago==='eft'?0:d.totalMP);
-  charts['dias']=new Chart(ctx,{
-    type:diasType,
-    data:{labels,datasets:[
-      {label:'Efectivo',data:eft,backgroundColor:hexA('#f43f5e',.7),borderColor:'#f43f5e',borderWidth:diasType==='line'?2:0,borderRadius:4,tension:.35,fill:false},
-      {label:'MercadoPago',data:mp,backgroundColor:hexA('#4f8cff',.7),borderColor:'#4f8cff',borderWidth:diasType==='line'?2:0,borderRadius:4,tension:.35,fill:false},
-    ]},
-    options:{...cOpts('$',false),plugins:{...cOpts('$',false).plugins,legend:{display:true,labels:{color:'#8a96b8',boxWidth:12,font:{size:11}}}}}
+  const weeks=S.compareMode?getWeeks():[getActive()];
+  if(!weeks.length||!weeks[0])return;
+
+  if(S.compareMode){
+    // Compare mode: one bar per week, total gastos
+    const labels=weeks.map(w=>w.label);
+    const eftData=weeks.map(w=>getFilteredDays(w).reduce((s,d)=>s+(S.fPago==='mp'?0:d.totalEft),0));
+    const mpData=weeks.map(w=>getFilteredDays(w).reduce((s,d)=>s+(S.fPago==='eft'?0:d.totalMP),0));
+    charts['dias']=new Chart(ctx,{
+      type:diasType,
+      data:{labels,datasets:[
+        {label:'Efectivo',data:eftData,backgroundColor:hexA('#f43f5e',.7),borderColor:'#f43f5e',borderWidth:diasType==='line'?2:0,borderRadius:4,tension:.35,fill:false},
+        {label:'MercadoPago',data:mpData,backgroundColor:hexA('#4f8cff',.7),borderColor:'#4f8cff',borderWidth:diasType==='line'?2:0,borderRadius:4,tension:.35,fill:false},
+      ]},
+      options:{...cOpts('$',false),plugins:{...cOpts('$',false).plugins,legend:{display:true,labels:{color:'#8a96b8',boxWidth:12,font:{size:11}}}}}
+    });
+  } else {
+    // Single week: show by day
+    const w=weeks[0];
+    const days=getFilteredDays(w);
+    const labels=days.map(d=>d.label.replace(' - ',' '));
+    const eft=days.map(d=>S.fPago==='mp'?0:d.totalEft);
+    const mp=days.map(d=>S.fPago==='eft'?0:d.totalMP);
+    charts['dias']=new Chart(ctx,{
+      type:diasType,
+      data:{labels,datasets:[
+        {label:'Efectivo',data:eft,backgroundColor:hexA('#f43f5e',.7),borderColor:'#f43f5e',borderWidth:diasType==='line'?2:0,borderRadius:4,tension:.35,fill:false},
+        {label:'MercadoPago',data:mp,backgroundColor:hexA('#4f8cff',.7),borderColor:'#4f8cff',borderWidth:diasType==='line'?2:0,borderRadius:4,tension:.35,fill:false},
+      ]},
+      options:{...cOpts('$',false),plugins:{...cOpts('$',false).plugins,legend:{display:true,labels:{color:'#8a96b8',boxWidth:12,font:{size:11}}}}}
+    });
+  }
+}
+
+// ── CONCEPT NORMALIZER ──
+const CONCEPT_GROUPS = {
+  'POLLOS':      ['POLLOS SA','POLLOS (','POLLOS -'],
+  'PAPAS':       ['PAPAS (','PAPAS NICO','PAPAS -'],
+  'BEBIDAS':     ['BEBIDAS','COCA','PEPSI','PRITTY','FANTA','SPRITE'],
+  'PAN':         ['PAN CASERO','PAN MILA','PAN '],
+  'RETIROS':     ['RETIRO PABLO','RETIRO SEBA','RETIRO '],
+  'LIMPIEZA':    ['LIMPIEZA','LIMPIAVIDRIOS','DETERGENTE'],
+  'CONDIMENTOS': ['CONDIMENTOS','SAVORA','SAL ENTREFINA','AZUCAR','AJIES','PIMIENTA'],
+};
+const SKIP_TOPS = ['VENTAS','INICIO SEMANA'];
+
+function normalizeConcepto(c) {
+  const cu = c.toUpperCase();
+  // Skip ventas and inicio semana
+  if (SKIP_TOPS.some(s => cu.includes(s))) return null;
+  // Try to match a group
+  for (const [group, keywords] of Object.entries(CONCEPT_GROUPS)) {
+    if (keywords.some(k => cu.includes(k.toUpperCase()))) return group;
+  }
+  // Return cleaned concept (remove quantities in parentheses)
+  return c.replace(/\s*\(.*?\)/g, '').replace(/\s*-\s*saldo.*$/i, '').replace(/\s*-\s*\$.*$/i, '').trim().toUpperCase();
+}
+
+function groupConceptos(days) {
+  const byGroup = {};
+  days.forEach(d => {
+    d.gastos.forEach(g => {
+      const key = normalizeConcepto(g.concepto);
+      if (!key) return; // skip ventas etc
+      const v = S.fPago==='mp' ? g.mp : S.fPago==='eft' ? g.eft : g.eft+g.mp;
+      if (v > 0) byGroup[key] = (byGroup[key]||0) + v;
+    });
   });
+  return byGroup;
 }
 
 function renderTopsChart(){
   dc('tops');
   const ctx=document.getElementById('cTops').getContext('2d');
-  const w=getActive();if(!w)return;
-  const days=getFilteredDays(w);
-  const byConcepto={};
-  days.flatMap(d=>d.gastos).forEach(g=>{
-    const v=S.fPago==='mp'?g.mp:S.fPago==='eft'?g.eft:g.eft+g.mp;
-    if(v>0) byConcepto[g.concepto]=(byConcepto[g.concepto]||0)+v;
-  });
+  // In compare mode, show combined tops across all weeks
+  const weeks=S.compareMode?getWeeks():[getActive()].filter(Boolean);
+  if(!weeks.length)return;
+  const allDays=weeks.flatMap(w=>getFilteredDays(w));
+  const byConcepto=groupConceptos(allDays);
+  { const days=allDays;
+  } // end days block
   const sorted=Object.entries(byConcepto).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const colors=sorted.map((_,i)=>COLORS[i%COLORS.length]);
   charts['tops']=new Chart(ctx,{
@@ -515,7 +577,7 @@ function renderTopsChart(){
 function renderMetodosChart(){
   dc('metodos');
   const ctx=document.getElementById('cMetodos').getContext('2d');
-  const weeks=getWeeks();if(!weeks.length)return;
+  const weeks=S.compareMode?getWeeks():[getActive()].filter(Boolean);if(!weeks.length)return;
   if(weeks.length===1){
     const w=weeks[0];
     const days=getFilteredDays(w);
@@ -539,7 +601,7 @@ function renderMetodosChart(){
 function renderVsVentasChart(){
   dc('vsventas');
   const ctx=document.getElementById('cVsVentas').getContext('2d');
-  const weeks=getWeeks();if(!weeks.length)return;
+  const weeks=S.compareMode?getWeeks():[getActive()].filter(Boolean);if(!weeks.length)return;
   const labels=weeks.map(w=>w.label);
   const ventasData=weeks.map(w=>getFilteredDays(w).reduce((s,d)=>s+d.ventas,0));
   const gastosData=weeks.map(w=>getFilteredDays(w).reduce((s,d)=>s+d.totalEft+d.totalMP,0));
@@ -611,6 +673,9 @@ function srt(col){
 function renderAll(){
   S.fTurno=document.getElementById('fTurno').value;
   S.fPago=document.getElementById('fPago').value;
+  S.compareMode=document.getElementById('cmpToggle').checked;
+  const weeks=getWeeks();
+  document.getElementById('compareBar').style.display=weeks.length>1?'flex':'none';
   renderKPIs();
   renderDiasChart();
   renderTopsChart();
