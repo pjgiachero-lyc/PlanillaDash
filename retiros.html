@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retiros · Limón y Chimi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{--bg:#0b0e15;--s1:#111520;--s2:#181d2e;--s3:#1e2438;--bd:#252d45;--a1:#4f8cff;--a2:#7c5cfc;--a3:#2dd4ac;--a4:#f97316;--a5:#f43f5e;--tx:#dde4f5;--mu:#5d6a8a;--lt:#8a96b8;
+  --pablo:#4f8cff;--ariel:#2dd4ac;--ema:#f97316}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--s1);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800}
+.logo em{color:var(--a4);font-style:normal}
+.back-btn{display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:7px 14px;font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none}
+.back-btn:hover{color:var(--a1);border-color:var(--a1)}
+main{padding:28px 28px 60px;max-width:1200px;margin:0 auto}
+
+/* UPLOAD */
+#dropzone{margin:0 auto 32px;border:2px dashed var(--bd);border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .25s;background:var(--s1)}
+#dropzone:hover,#dropzone.over{border-color:var(--a4);background:rgba(249,115,22,.05)}
+#dropzone .dz-icon{font-size:2.5rem;margin-bottom:12px;opacity:.4}
+#dropzone p{color:var(--mu);font-size:.88rem;line-height:1.8}
+#dropzone strong{color:var(--tx)}
+.btn-upload{margin-top:16px;display:inline-block;background:var(--a4);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.88rem;cursor:pointer;font-family:inherit;transition:opacity .2s}
+.btn-upload:hover{opacity:.82}
+#fileInput{display:none}
+
+/* SOCIO CARDS */
+.socios-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+@media(max-width:700px){.socios-row{grid-template-columns:1fr}}
+.socio-card{background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:22px;position:relative;overflow:hidden;cursor:pointer;transition:all .2s}
+.socio-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.socio-card.pablo::after{background:var(--pablo)}
+.socio-card.ariel::after{background:var(--ariel)}
+.socio-card.ema::after{background:var(--ema)}
+.socio-card.active{transform:translateY(-3px)}
+.socio-card.pablo.active{box-shadow:0 8px 24px rgba(79,140,255,.2);border-color:var(--pablo)}
+.socio-card.ariel.active{box-shadow:0 8px 24px rgba(45,212,172,.2);border-color:var(--ariel)}
+.socio-card.ema.active{box-shadow:0 8px 24px rgba(249,115,22,.2);border-color:var(--ema)}
+.socio-name{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:4px}
+.socio-total{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:700;margin:8px 0 4px}
+.socio-semanas{font-size:.72rem;color:var(--mu)}
+.socio-avg{font-size:.78rem;color:var(--lt);margin-top:6px}
+
+/* CHARTS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+@media(max-width:800px){.g2{grid-template-columns:1fr}}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:18px}
+.card-title{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:4px}
+.card-sub{font-size:.68rem;color:var(--mu);margin-bottom:16px}
+canvas{max-height:260px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead th{padding:9px 12px;background:var(--s2);text-align:left;color:var(--mu);font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .12s}
+tbody tr:hover{background:var(--s2)}
+tbody td{padding:8px 12px;white-space:nowrap}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
+.chip.pablo{background:rgba(79,140,255,.15);color:var(--pablo)}
+.chip.ariel{background:rgba(45,212,172,.15);color:var(--ariel)}
+.chip.ema{background:rgba(249,115,22,.15);color:var(--ema)}
+.empty{text-align:center;padding:60px 20px;color:var(--mu)}
+.empty .big{font-size:2.5rem;opacity:.2;margin-bottom:12px}
+.empty h2{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--lt);margin-bottom:8px}
+.empty p{font-size:.85rem;line-height:1.7}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+</style>
+</head>
+<body>
+<script>if(localStorage.getItem('lyc_auth')!=='1')window.location.href='/';</script>
+
+<header>
+  <div class="logo">Limón y<em> Chimi</em> — Retiros</div>
+  <a class="back-btn" href="/">← Menú</a>
+</header>
+
+<main>
+
+<div id="dropzone" onclick="document.getElementById('fileInput').click()">
+  <div class="dz-icon">💼</div>
+  <p><strong>Subí el archivo RESUMEN_RETIROS.xlsx</strong></p>
+  <p>Se lee automáticamente de la hoja <strong>Hoja4</strong></p>
+  <button class="btn-upload" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Seleccionar archivo</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls">
+</div>
+
+<div id="dashboard" style="display:none">
+
+  <!-- SOCIO CARDS -->
+  <div class="socios-row" id="socioCards"></div>
+
+  <!-- CHARTS -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Retiros por semana</div>
+      <div class="card-sub">Comparativa entre socios</div>
+      <canvas id="cSemanal"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Total acumulado por socio</div>
+      <div class="card-sub">Proporción del total retirado</div>
+      <canvas id="cPropor"></canvas>
+    </div>
+  </div>
+
+  <!-- TABLA DETALLE -->
+  <div class="card">
+    <div class="card-title">Detalle por semana</div>
+    <div class="card-sub">Retiros de cada socio semana a semana</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Semana</th>
+            <th class="num" style="color:var(--pablo)">Pablo</th>
+            <th class="num" style="color:var(--ariel)">Ariel</th>
+            <th class="num" style="color:var(--ema)">Ema</th>
+            <th class="num">Total semana</th>
+            <th class="num">Mayor retiro</th>
+          </tr>
+        </thead>
+        <tbody id="tBody"></tbody>
+        <tfoot id="tFoot" style="font-weight:600"></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+</main>
+
+<script>
+const SOCIO_COLORS = {pablo:'#4f8cff', ariel:'#2dd4ac', ema:'#f97316'};
+let DATA = null;
+const charts = {};
+
+// ── FILE HANDLING ──
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const wb = XLSX.read(ev.target.result, {type:'array', cellDates:true});
+    // Try Hoja4 first, then first sheet
+    const sheetName = wb.SheetNames.find(n => n === 'Hoja4') || wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+    DATA = parseRetiros(rows);
+    if (!DATA || !DATA.semanas.length) {
+      alert('No se encontraron datos de retiros en el archivo.');
+      return;
+    }
+    document.getElementById('dropzone').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    render();
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+});
+
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{
+  e.preventDefault();dz.classList.remove('over');
+  const file=[...e.dataTransfer.files].find(f=>f.name.match(/\.xlsx?$/i));
+  if(file){document.getElementById('fileInput').files;
+    const dt=new DataTransfer();dt.items.add(file);
+    document.getElementById('fileInput').files=dt.files;
+    document.getElementById('fileInput').dispatchEvent(new Event('change'));}
+});
+
+// ── PARSER ──
+function parseRetiros(rows) {
+  // Find the row with RETIROS EMA / RETIROS PABLO / RETIROS ARIEL
+  let headerRow = -1;
+  let colEma = -1, colPablo = -1, colAriel = -1, colSemana = -1;
+
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r] || [];
+    const rowStr = row.map(v => String(v||'').toUpperCase());
+    if (rowStr.some(v => v.includes('RETIROS EMA') || v.includes('RETIROS PABLO'))) {
+      headerRow = r;
+      rowStr.forEach((v, i) => {
+        if (v.includes('RETIROS EMA')) colEma = i;
+        if (v.includes('RETIROS PABLO')) colPablo = i;
+        if (v.includes('RETIROS ARIEL')) colAriel = i;
+      });
+      colSemana = 0;
+      break;
+    }
+  }
+
+  if (headerRow < 0) return null;
+
+  const semanas = [];
+  for (let r = headerRow + 1; r < rows.length; r++) {
+    const row = rows[r] || [];
+    const label = String(row[colSemana] || '').trim();
+    if (!label || !label.toLowerCase().includes('semana')) continue;
+
+    const pablo = parseNum(row[colPablo]);
+    const ariel = parseNum(row[colAriel]);
+    const ema   = parseNum(row[colEma]);
+    if (pablo === 0 && ariel === 0 && ema === 0) continue;
+
+    semanas.push({ label: label.replace('semana del ', '').trim(), pablo, ariel, ema,
+                   total: pablo + ariel + ema });
+  }
+
+  // Also try to find totals row (row after last semana with no label)
+  const totals = { pablo:0, ariel:0, ema:0 };
+  semanas.forEach(s => { totals.pablo+=s.pablo; totals.ariel+=s.ariel; totals.ema+=s.ema; });
+
+  return { semanas, totals };
+}
+
+function parseNum(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g,''));
+  return isNaN(n) ? 0 : Math.abs(n);
+}
+
+// ── RENDER ──
+function render() {
+  if (!DATA) return;
+  renderSocioCards();
+  renderCharts();
+  renderTable();
+}
+
+function renderSocioCards() {
+  const { semanas, totals } = DATA;
+  const grandTotal = totals.pablo + totals.ariel + totals.ema;
+  const avgPablo = totals.pablo / semanas.length;
+  const avgAriel = totals.ariel / semanas.length;
+  const avgEma   = totals.ema   / semanas.length;
+
+  document.getElementById('socioCards').innerHTML = [
+    { name:'Pablo', key:'pablo', total:totals.pablo, avg:avgPablo, color:'pablo' },
+    { name:'Ariel', key:'ariel', total:totals.ariel, avg:avgAriel, color:'ariel' },
+    { name:'Ema',   key:'ema',   total:totals.ema,   avg:avgEma,   color:'ema'   },
+  ].map(s => `
+    <div class="socio-card ${s.color}">
+      <div class="socio-name">${s.name}</div>
+      <div class="socio-total">$${fmt(s.total)}</div>
+      <div class="socio-semanas">${semanas.length} semanas · ${((s.total/grandTotal)*100).toFixed(1)}% del total</div>
+      <div class="socio-avg">Promedio semanal: $${fmt(s.avg)}</div>
+    </div>`).join('');
+}
+
+function renderCharts() {
+  const { semanas, totals } = DATA;
+  const labels = semanas.map(s => s.label);
+
+  // Chart 1: retiros por semana
+  if (charts.semanal) charts.semanal.destroy();
+  charts.semanal = new Chart(document.getElementById('cSemanal').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Pablo', data:semanas.map(s=>s.pablo), backgroundColor:hexA('#4f8cff',.75), borderRadius:4, borderWidth:0 },
+        { label:'Ariel', data:semanas.map(s=>s.ariel), backgroundColor:hexA('#2dd4ac',.75), borderRadius:4, borderWidth:0 },
+        { label:'Ema',   data:semanas.map(s=>s.ema),   backgroundColor:hexA('#f97316',.75), borderRadius:4, borderWidth:0 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:true,labels:{color:'#8a96b8',boxWidth:12,font:{size:11}}},
+        tooltip:{backgroundColor:'#1e2438',borderColor:'#252d45',borderWidth:1,
+          callbacks:{label:ctx=>` $${fmt(ctx.parsed.y)}`}}},
+      scales:{
+        x:{grid:{color:'rgba(37,45,69,.4)'},ticks:{color:'#5d6a8a',font:{size:10},maxRotation:45}},
+        y:{grid:{color:'rgba(37,45,69,.4)'},ticks:{color:'#5d6a8a',font:{size:10},callback:v=>'$'+fmt(v)}}
+      }
+    }
+  });
+
+  // Chart 2: proporción total
+  if (charts.propor) charts.propor.destroy();
+  charts.propor = new Chart(document.getElementById('cPropor').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pablo','Ariel','Ema'],
+      datasets: [{
+        data: [totals.pablo, totals.ariel, totals.ema],
+        backgroundColor: ['#4f8cff','#2dd4ac','#f97316'],
+        borderWidth: 0, hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{position:'bottom',labels:{color:'#8a96b8',boxWidth:12,padding:14,font:{size:11}}},
+        tooltip:{backgroundColor:'#1e2438',borderColor:'#252d45',borderWidth:1,
+          callbacks:{label:ctx=>{
+            const v=ctx.parsed;
+            const total=totals.pablo+totals.ariel+totals.ema;
+            return ` $${fmt(v)} (${((v/total)*100).toFixed(1)}%)`;
+          }}}
+      }
+    }
+  });
+}
+
+function renderTable() {
+  const { semanas, totals } = DATA;
+  const tbody = document.getElementById('tBody');
+  const tfoot = document.getElementById('tFoot');
+
+  tbody.innerHTML = semanas.map(s => {
+    const mayor = Math.max(s.pablo, s.ariel, s.ema);
+    const mayorNombre = s.pablo===mayor?'pablo':s.ariel===mayor?'ariel':'ema';
+    return `<tr>
+      <td>${s.label}</td>
+      <td class="num" style="color:var(--pablo)">${s.pablo>0?'$'+fmt(s.pablo):'—'}</td>
+      <td class="num" style="color:var(--ariel)">${s.ariel>0?'$'+fmt(s.ariel):'—'}</td>
+      <td class="num" style="color:var(--ema)">${s.ema>0?'$'+fmt(s.ema):'—'}</td>
+      <td class="num">$${fmt(s.total)}</td>
+      <td><span class="chip ${mayorNombre}">${mayorNombre.charAt(0).toUpperCase()+mayorNombre.slice(1)} $${fmt(mayor)}</span></td>
+    </tr>`;
+  }).join('');
+
+  const grandTotal = totals.pablo + totals.ariel + totals.ema;
+  tfoot.innerHTML = `<tr style="border-top:2px solid var(--bd)">
+    <td><strong>TOTAL</strong></td>
+    <td class="num" style="color:var(--pablo)"><strong>$${fmt(totals.pablo)}</strong></td>
+    <td class="num" style="color:var(--ariel)"><strong>$${fmt(totals.ariel)}</strong></td>
+    <td class="num" style="color:var(--ema)"><strong>$${fmt(totals.ema)}</strong></td>
+    <td class="num"><strong>$${fmt(grandTotal)}</strong></td>
+    <td></td>
+  </tr>`;
+}
+
+// ── UTILS ──
+function fmt(n) {
+  if(!n||isNaN(n)) return '0';
+  return Math.round(n).toLocaleString('es-AR');
+}
+function hexA(hex,a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+</script>
+</body>
+</html>
