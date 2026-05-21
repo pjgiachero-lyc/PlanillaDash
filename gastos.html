@@ -454,12 +454,7 @@ function renderKPIs(){
   const totalEft=days.reduce((s,d)=>s+(S.fPago==='mp'?0:d.totalEft),0);
   const totalMP=days.reduce((s,d)=>s+(S.fPago==='eft'?0:d.totalMP),0);
   const total=totalEft+totalMP;
-  const allGastos=days.flatMap(d=>d.gastos).filter(g=>S.fPago==='mp'?g.mp>0:S.fPago==='eft'?g.eft>0:true);
-  const byConcepto={};
-  allGastos.forEach(g=>{
-    const v=(S.fPago==='mp'?g.mp:S.fPago==='eft'?g.eft:g.eft+g.mp);
-    byConcepto[g.concepto]=(byConcepto[g.concepto]||0)+v;
-  });
+  const byConcepto=groupConceptos(days);
   const top=Object.entries(byConcepto).sort((a,b)=>b[1]-a[1])[0];
   const totalVentas=days.reduce((s,d)=>s+d.ventas,0);
   const ratio=totalVentas>0?((total/totalVentas)*100).toFixed(1):0;
