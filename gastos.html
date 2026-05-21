@@ -224,6 +224,29 @@ td.hi{color:var(--a5);font-weight:600}
     </div>
 
   </div>
+
+  <!-- MODAL DETALLE CONCEPTO -->
+  <div id="modalOverlay" onclick="closeModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500"></div>
+  <div id="modalBox" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:501;background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:24px;width:90%;max-width:520px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-family:Syne,sans-serif;font-size:1rem;font-weight:700" id="modalTitle"></div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:3px" id="modalTotal"></div>
+      </div>
+      <button onclick="closeModal()" style="background:var(--s3);border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;font-size:.8rem">✕ Cerrar</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+      <thead>
+        <tr>
+          <th style="padding:7px 10px;background:var(--s2);text-align:left;color:var(--mu);font-size:.63rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Concepto original</th>
+          <th style="padding:7px 10px;background:var(--s2);text-align:left;color:var(--mu);font-size:.63rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Día</th>
+          <th style="padding:7px 10px;background:var(--s2);text-align:right;color:var(--mu);font-size:.63rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Monto</th>
+        </tr>
+      </thead>
+      <tbody id="modalBody"></tbody>
+    </table>
+  </div>
+</div>
 </main>
 </div>
 
@@ -570,7 +593,27 @@ function renderTopsChart(){
         borderColor:topsType==='doughnut'?colors:'transparent',
         borderRadius:topsType==='bar'?4:0,borderWidth:topsType==='doughnut'?2:0}]
     },
-    options:topsType==='doughnut'?dOpts():cOpts('$',true)
+    options:{
+      ...(topsType==='doughnut'?dOpts():cOpts('$',true)),
+      onClick: (e, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const label = sorted[idx][0];
+        showConceptoDetail(label);
+      },
+      plugins: {
+        ...(topsType==='doughnut'?dOpts():cOpts('$',true)).plugins,
+        tooltip: {
+          ...(topsType==='doughnut'?dOpts():cOpts('$',true)).plugins?.tooltip,
+          callbacks: {
+            label: ctx => {
+              const v = sorted[ctx.dataIndex][1];
+              return ` $${fmt(v)} — clic para ver detalle`;
+            }
+          }
+        }
+      }
+    }
   });
 }
 
@@ -710,6 +753,46 @@ function isMobile(){return window.innerWidth<=700;}
 function toggleSidebar(){document.querySelector('aside').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
 function closeSidebar(){document.querySelector('aside').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 window.addEventListener('resize',()=>{if(!isMobile()){document.querySelector('aside').classList.remove('open');document.getElementById('overlay').classList.remove('show');}});
+
+// ── MODAL DETALLE ──
+function showConceptoDetail(groupName) {
+  const weeks = S.compareMode ? getWeeks() : [getActive()].filter(Boolean);
+  if (!weeks.length) return;
+  const allDays = weeks.flatMap(w => getFilteredDays(w));
+
+  // Collect all gastos that belong to this group
+  const items = [];
+  allDays.forEach(d => {
+    d.gastos.forEach(g => {
+      const norm = normalizeConcepto(g.concepto);
+      if (norm === groupName) {
+        const v = S.fPago==='mp' ? g.mp : S.fPago==='eft' ? g.eft : g.eft+g.mp;
+        if (v > 0) items.push({concepto: g.concepto, dia: d.label, eft: g.eft, mp: g.mp, total: v});
+      }
+    });
+  });
+
+  if (!items.length) return;
+  items.sort((a,b) => b.total - a.total);
+  const totalGrupo = items.reduce((s,i) => s+i.total, 0);
+
+  document.getElementById('modalTitle').textContent = groupName;
+  document.getElementById('modalTotal').textContent = `Total: $${fmt(totalGrupo)} · ${items.length} registro${items.length>1?'s':''}`;
+  document.getElementById('modalBody').innerHTML = items.map(i => `
+    <tr style="border-bottom:1px solid var(--bd)">
+      <td style="padding:7px 10px">${i.concepto}</td>
+      <td style="padding:7px 10px;color:var(--mu);font-size:.75rem">${i.dia}</td>
+      <td style="padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;color:var(--a5);font-weight:600">$${fmt(i.total)}</td>
+    </tr>`).join('');
+
+  document.getElementById('modalOverlay').style.display = 'block';
+  document.getElementById('modalBox').style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+  document.getElementById('modalBox').style.display = 'none';
+}
 
 // ── INIT ──
 refreshFileList();
