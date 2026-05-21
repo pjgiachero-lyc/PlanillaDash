@@ -449,31 +449,36 @@ function showDashboard(){
 
 // ── KPIs ──
 function renderKPIs(){
-  const w=getActive();if(!w)return;
-  const days=getFilteredDays(w);
-  const totalEft=days.reduce((s,d)=>s+(S.fPago==='mp'?0:d.totalEft),0);
-  const totalMP=days.reduce((s,d)=>s+(S.fPago==='eft'?0:d.totalMP),0);
+  const weeks=getWeeks();if(!weeks.length)return;
+  // Use all selected weeks combined
+  const allDays=weeks.flatMap(w=>getFilteredDays(w));
+  const totalEft=allDays.reduce((s,d)=>s+(S.fPago==='mp'?0:d.totalEft),0);
+  const totalMP=allDays.reduce((s,d)=>s+(S.fPago==='eft'?0:d.totalMP),0);
   const total=totalEft+totalMP;
-  const byConcepto=groupConceptos(days);
+  const byConcepto=groupConceptos(allDays);
   const top=Object.entries(byConcepto).sort((a,b)=>b[1]-a[1])[0];
-  const totalVentas=days.reduce((s,d)=>s+d.ventas,0);
+  const totalVentas=allDays.reduce((s,d)=>s+d.ventas,0);
   const ratio=totalVentas>0?((total/totalVentas)*100).toFixed(1):0;
+  const label=weeks.length===1?weeks[0].label:`${weeks.length} semanas`;
 
+  // Delta vs previous week (only when single week selected)
   let delta=null;
-  const weeks=getWeeks();
-  if(weeks.length>1){
-    const ai=weeks.indexOf(w);
-    const prev=weeks[ai>0?ai-1:ai+1];
-    if(prev&&prev!==w){
-      const pt=getFilteredDays(prev).reduce((s,d)=>s+d.totalEft+d.totalMP,0);
-      if(pt>0) delta=((total-pt)/pt*100).toFixed(1);
+  if(weeks.length===1){
+    const allWeeks=getWeeks();
+    const ai=S.selected.indexOf(S.activeKey);
+    if(ai>0){
+      const prev=S.loaded[S.selected[ai-1]];
+      if(prev){
+        const pt=getFilteredDays(prev).reduce((s,d)=>s+d.totalEft+d.totalMP,0);
+        if(pt>0) delta=((total-pt)/pt*100).toFixed(1);
+      }
     }
   }
 
   document.getElementById('kpiRow').innerHTML=[
-    {l:'Total gastos',v:'$'+fmt(total),s:w.label,delta},
-    {l:'Efectivo',v:'$'+fmt(totalEft),s:((totalEft/total)*100||0).toFixed(1)+'% del total'},
-    {l:'MercadoPago',v:'$'+fmt(totalMP),s:((totalMP/total)*100||0).toFixed(1)+'% del total'},
+    {l:'Total gastos',v:'$'+fmt(total),s:label,delta},
+    {l:'Efectivo',v:'$'+fmt(totalEft),s:totalEft>0?((totalEft/total)*100).toFixed(1)+'% del total':''},
+    {l:'MercadoPago',v:'$'+fmt(totalMP),s:totalMP>0?((totalMP/total)*100).toFixed(1)+'% del total':''},
     {l:'% sobre ventas',v:ratio+'%',s:'gastos / ventas'},
     {l:'Mayor gasto',v:top?top[0]:'—',s:top?'$'+fmt(top[1]):''},
   ].map(k=>`<div class="kpi">
