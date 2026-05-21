@@ -86,12 +86,15 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 
 <main>
 
-<div id="dropzone" onclick="document.getElementById('fileInput').click()">
-  <div class="dz-icon">💼</div>
-  <p><strong>Subí el archivo RESUMEN_RETIROS.xlsx</strong></p>
-  <p>Se lee automáticamente de la hoja <strong>Hoja4</strong></p>
-  <button class="btn-upload" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Seleccionar archivo</button>
-  <input type="file" id="fileInput" accept=".xlsx,.xls">
+<div id="loadingState" style="text-align:center;padding:40px;color:var(--mu)">
+  <div style="width:20px;height:20px;border:2px solid var(--bd);border-top-color:var(--a4);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>
+  <p>Buscando RESUMEN_RETIROS.xlsx en Drive…</p>
+</div>
+<div id="errorState" style="display:none;text-align:center;padding:40px">
+  <div style="font-size:2rem;opacity:.3;margin-bottom:12px">⚠️</div>
+  <p style="color:var(--mu)" id="errorMsg">No se encontró el archivo en Drive.</p>
+  <p style="color:var(--mu);font-size:.8rem;margin-top:8px">Asegurate de subir <strong>RESUMEN_RETIROS.xlsx</strong> a la carpeta <strong>planillas_dash</strong> de Google Drive.</p>
+  <button onclick="loadFromDrive()" style="margin-top:16px;background:var(--a4);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.85rem;cursor:pointer;font-family:inherit">↺ Reintentar</button>
 </div>
 
 <div id="dashboard" style="display:none">
@@ -144,40 +147,46 @@ const SOCIO_COLORS = {pablo:'#4f8cff', ariel:'#2dd4ac', ema:'#f97316'};
 let DATA = null;
 const charts = {};
 
-// ── FILE HANDLING ──
-document.getElementById('fileInput').addEventListener('change', e => {
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const wb = XLSX.read(ev.target.result, {type:'array', cellDates:true});
-    // Try Hoja4 first, then first sheet
+// ── DRIVE LOADING ──
+const SERVER = window.location.hostname==='localhost'?'http://localhost:8765':'';
+const RETIROS_FILENAME = 'RESUMEN_RETIROS.xlsx';
+
+async function loadFromDrive() {
+  document.getElementById('loadingState').style.display='block';
+  document.getElementById('errorState').style.display='none';
+  document.getElementById('dashboard').style.display='none';
+
+  try {
+    // Get file list from server
+    const res = await fetch(`${SERVER}/api/files`);
+    if (!res.ok) throw new Error('No se pudo conectar al servidor');
+    const files = await res.json();
+
+    // Find RESUMEN_RETIROS.xlsx
+    const file = files.find(f => f.name.toUpperCase().includes('RESUMEN_RETIROS'));
+    if (!file) throw new Error('No se encontró RESUMEN_RETIROS.xlsx en Drive');
+
+    // Download it
+    const dlRes = await fetch(`${SERVER}/planillas/${encodeURIComponent(file.id||file.name)}`);
+    if (!dlRes.ok) throw new Error('No se pudo descargar el archivo');
+    const buf = await dlRes.arrayBuffer();
+
+    const wb = XLSX.read(buf, {type:'array', cellDates:true});
     const sheetName = wb.SheetNames.find(n => n === 'Hoja4') || wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
     DATA = parseRetiros(rows);
-    if (!DATA || !DATA.semanas.length) {
-      alert('No se encontraron datos de retiros en el archivo.');
-      return;
-    }
-    document.getElementById('dropzone').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    render();
-  };
-  reader.readAsArrayBuffer(file);
-  e.target.value = '';
-});
+    if (!DATA || !DATA.semanas.length) throw new Error('No se encontraron datos de retiros en el archivo');
 
-const dz = document.getElementById('dropzone');
-dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
-dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-dz.addEventListener('drop', e=>{
-  e.preventDefault();dz.classList.remove('over');
-  const file=[...e.dataTransfer.files].find(f=>f.name.match(/\.xlsx?$/i));
-  if(file){document.getElementById('fileInput').files;
-    const dt=new DataTransfer();dt.items.add(file);
-    document.getElementById('fileInput').files=dt.files;
-    document.getElementById('fileInput').dispatchEvent(new Event('change'));}
-});
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    render();
+  } catch(e) {
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('errorState').style.display='block';
+    document.getElementById('errorMsg').textContent = e.message;
+  }
+}
 
 // ── PARSER ──
 function parseRetiros(rows) {
@@ -341,6 +350,9 @@ function renderTable() {
     <td></td>
   </tr>`;
 }
+
+// Auto-load on page start
+loadFromDrive();
 
 // ── UTILS ──
 function fmt(n) {

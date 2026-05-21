@@ -342,7 +342,7 @@ async function refreshFileList() {
     const res = await fetch(`${SERVER}/api/files`);
     if (!res.ok) throw new Error('sin respuesta');
     const files = await res.json();
-    S.available = files;
+    S.available = files.filter(f => !f.name.toUpperCase().includes('RESUMEN_RETIROS'));
     renderSidebar();
     document.getElementById('sbStatus').textContent =
       files.length === 0 ? 'Sin archivos en /planillas' :
