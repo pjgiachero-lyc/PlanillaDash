@@ -8,361 +8,322 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-:root{--bg:#0b0e15;--s1:#111520;--s2:#181d2e;--s3:#1e2438;--bd:#252d45;--a1:#4f8cff;--a2:#7c5cfc;--a3:#2dd4ac;--a4:#f97316;--a5:#f43f5e;--tx:#dde4f5;--mu:#5d6a8a;--lt:#8a96b8;
-  --pablo:#4f8cff;--ariel:#2dd4ac;--ema:#f97316}
+:root{--bg:#0b0e15;--s1:#111520;--s2:#181d2e;--s3:#1e2438;--bd:#252d45;--a1:#4f8cff;--a2:#7c5cfc;--a3:#2dd4ac;--a4:#f97316;--a5:#f43f5e;--tx:#dde4f5;--mu:#5d6a8a;--lt:#8a96b8;--pablo:#4f8cff;--ariel:#2dd4ac}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
 header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--s1);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
-.logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800}
-.logo em{color:var(--a4);font-style:normal}
-.back-btn{display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:7px 14px;font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none}
+.logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800}.logo em{color:var(--a4);font-style:normal}
+.back-btn{display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:7px 14px;font-size:.78rem;text-decoration:none;transition:all .15s}
 .back-btn:hover{color:var(--a1);border-color:var(--a1)}
-main{padding:28px 28px 60px;max-width:1200px;margin:0 auto}
+main{padding:28px 28px 60px;max-width:1100px;margin:0 auto}
 
-/* UPLOAD */
-#dropzone{margin:0 auto 32px;border:2px dashed var(--bd);border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .25s;background:var(--s1)}
-#dropzone:hover,#dropzone.over{border-color:var(--a4);background:rgba(249,115,22,.05)}
-#dropzone .dz-icon{font-size:2.5rem;margin-bottom:12px;opacity:.4}
-#dropzone p{color:var(--mu);font-size:.88rem;line-height:1.8}
-#dropzone strong{color:var(--tx)}
-.btn-upload{margin-top:16px;display:inline-block;background:var(--a4);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.88rem;cursor:pointer;font-family:inherit;transition:opacity .2s}
-.btn-upload:hover{opacity:.82}
-#fileInput{display:none}
+/* LOADING */
+#loadingState{text-align:center;padding:60px 20px;color:var(--mu)}
+.spinner{width:20px;height:20px;border:2px solid var(--bd);border-top-color:var(--a4);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#errorState{display:none;text-align:center;padding:60px 20px}
+#errorState .big{font-size:2rem;opacity:.3;margin-bottom:12px}
 
-/* SOCIO CARDS */
-.socios-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
-@media(max-width:700px){.socios-row{grid-template-columns:1fr}}
-.socio-card{background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:22px;position:relative;overflow:hidden;cursor:pointer;transition:all .2s}
-.socio-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.socio-card.pablo::after{background:var(--pablo)}
-.socio-card.ariel::after{background:var(--ariel)}
-.socio-card.ema::after{background:var(--ema)}
-.socio-card.active{transform:translateY(-3px)}
-.socio-card.pablo.active{box-shadow:0 8px 24px rgba(79,140,255,.2);border-color:var(--pablo)}
-.socio-card.ariel.active{box-shadow:0 8px 24px rgba(45,212,172,.2);border-color:var(--ariel)}
-.socio-card.ema.active{box-shadow:0 8px 24px rgba(249,115,22,.2);border-color:var(--ema)}
-.socio-name{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:4px}
-.socio-total{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:700;margin:8px 0 4px}
-.socio-semanas{font-size:.72rem;color:var(--mu)}
-.socio-avg{font-size:.78rem;color:var(--lt);margin-top:6px}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px}
+.kpi{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.ariel::after{background:var(--ariel)}.kpi.pablo::after{background:var(--pablo)}
+.kpi.total::after{background:var(--a4)}.kpi.saldo-ariel::after{background:var(--ariel)}
+.kpi.saldo-pablo::after{background:var(--pablo)}
+.kpi-label{font-size:.62rem;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700}
+.kpi-sub{font-size:.7rem;color:var(--mu);margin-top:3px}
 
 /* CHARTS */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
-@media(max-width:800px){.g2{grid-template-columns:1fr}}
+@media(max-width:750px){.g2{grid-template-columns:1fr}}
 .card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:18px}
 .card-title{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:4px}
-.card-sub{font-size:.68rem;color:var(--mu);margin-bottom:16px}
-canvas{max-height:260px}
+.card-sub{font-size:.67rem;color:var(--mu);margin-bottom:16px}
+canvas{max-height:240px}
+
+/* BLOQUES */
+.bloques{display:flex;flex-direction:column;gap:18px}
+.bloque{background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.bloque-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.bloque-header.ariel{border-left:4px solid var(--ariel)}.bloque-header.pablo{border-left:4px solid var(--pablo)}
+.bloque-socio{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700}
+.bloque-socio.ariel{color:var(--ariel)}.bloque-socio.pablo{color:var(--pablo)}
+.bloque-periodo{font-size:.72rem;color:var(--mu)}
+.bloque-saldo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700}
+.bloque-saldo.pos{color:var(--a3)}.bloque-saldo.neg{color:var(--a5)}
+.mov-list{padding:0}
+.mov-row{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;border-bottom:1px solid var(--bd);font-size:.82rem;gap:12px}
+.mov-row:last-child{border-bottom:none}
+.mov-row.retiro{background:rgba(244,63,94,.06)}
+.mov-row.ingreso{background:rgba(45,212,172,.03)}
+.mov-row.gasto{background:rgba(249,115,22,.03)}
+.mov-concepto{flex:1;color:var(--tx)}
+.mov-concepto.retiro-label{color:var(--a5);font-weight:600}
+.mov-monto{font-variant-numeric:tabular-nums;font-family:'Syne',sans-serif;font-size:.85rem;white-space:nowrap}
+.mov-monto.pos{color:var(--a3)}.mov-monto.neg{color:var(--a5)}
+.saldo-ant-row{display:flex;justify-content:space-between;padding:9px 18px;background:var(--s2);font-size:.78rem;color:var(--mu);border-bottom:1px solid var(--bd)}
+.saldo-fin-row{display:flex;justify-content:space-between;padding:12px 18px;background:var(--s2);font-size:.88rem;font-weight:600;border-top:2px solid var(--bd)}
 
 /* TABLE */
 .table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.82rem}
-thead th{padding:9px 12px;background:var(--s2);text-align:left;color:var(--mu);font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);white-space:nowrap}
-tbody tr{border-bottom:1px solid var(--bd);transition:background .12s}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead th{padding:9px 12px;background:var(--s2);text-align:left;color:var(--mu);font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
 tbody tr:hover{background:var(--s2)}
 tbody td{padding:8px 12px;white-space:nowrap}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 .chip{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
-.chip.pablo{background:rgba(79,140,255,.15);color:var(--pablo)}
-.chip.ariel{background:rgba(45,212,172,.15);color:var(--ariel)}
-.chip.ema{background:rgba(249,115,22,.15);color:var(--ema)}
-.empty{text-align:center;padding:60px 20px;color:var(--mu)}
-.empty .big{font-size:2.5rem;opacity:.2;margin-bottom:12px}
-.empty h2{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--lt);margin-bottom:8px}
-.empty p{font-size:.85rem;line-height:1.7}
+.chip.ariel{background:rgba(45,212,172,.15);color:var(--ariel)}.chip.pablo{background:rgba(79,140,255,.15);color:var(--pablo)}
 
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
 </style>
 </head>
 <body>
 <script>if(localStorage.getItem('lyc_auth')!=='1')window.location.href='/';</script>
-
 <header>
   <div class="logo">Limón y<em> Chimi</em> — Retiros</div>
   <a class="back-btn" href="/">← Menú</a>
 </header>
-
 <main>
-
-<div id="loadingState" style="text-align:center;padding:40px;color:var(--mu)">
-  <div style="width:20px;height:20px;border:2px solid var(--bd);border-top-color:var(--a4);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>
-  <p>Buscando RESUMEN_RETIROS.xlsx en Drive…</p>
-</div>
-<div id="errorState" style="display:none;text-align:center;padding:40px">
-  <div style="font-size:2rem;opacity:.3;margin-bottom:12px">⚠️</div>
-  <p style="color:var(--mu)" id="errorMsg">No se encontró el archivo en Drive.</p>
-  <p style="color:var(--mu);font-size:.8rem;margin-top:8px">Asegurate de subir <strong>RESUMEN_RETIROS.xlsx</strong> a la carpeta <strong>planillas_dash</strong> de Google Drive.</p>
-  <button onclick="loadFromDrive()" style="margin-top:16px;background:var(--a4);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.85rem;cursor:pointer;font-family:inherit">↺ Reintentar</button>
-</div>
-
-<div id="dashboard" style="display:none">
-
-  <!-- SOCIO CARDS -->
-  <div class="socios-row" id="socioCards"></div>
-
-  <!-- CHARTS -->
-  <div class="g2">
-    <div class="card">
-      <div class="card-title">Retiros por semana</div>
-      <div class="card-sub">Comparativa entre socios</div>
-      <canvas id="cSemanal"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title">Total acumulado por socio</div>
-      <div class="card-sub">Proporción del total retirado</div>
-      <canvas id="cPropor"></canvas>
-    </div>
+  <div id="loadingState"><div class="spinner"></div><p>Buscando RESUMEN_RETIROS.xlsx en Drive…</p></div>
+  <div id="errorState">
+    <div class="big">⚠️</div>
+    <p style="color:var(--mu)" id="errorMsg">No se encontró el archivo.</p>
+    <p style="color:var(--mu);font-size:.8rem;margin-top:8px">Subí <strong>RESUMEN_RETIROS.xlsx</strong> a la carpeta <strong>planillas_dash</strong> de Drive.</p>
+    <button onclick="loadFromDrive()" style="margin-top:16px;background:var(--a4);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.85rem;cursor:pointer;font-family:inherit">↺ Reintentar</button>
   </div>
 
-  <!-- TABLA DETALLE -->
-  <div class="card">
-    <div class="card-title">Detalle por semana</div>
-    <div class="card-sub">Retiros de cada socio semana a semana</div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Semana</th>
-            <th class="num" style="color:var(--pablo)">Pablo</th>
-            <th class="num" style="color:var(--ariel)">Ariel</th>
-            <th class="num" style="color:var(--ema)">Ema</th>
-            <th class="num">Total semana</th>
-            <th class="num">Mayor retiro</th>
-          </tr>
-        </thead>
-        <tbody id="tBody"></tbody>
-        <tfoot id="tFoot" style="font-weight:600"></tfoot>
-      </table>
+  <div id="dashboard" style="display:none">
+    <div class="kpis" id="kpiRow"></div>
+    <div class="g2">
+      <div class="card"><div class="card-title">Retiros por período</div><div class="card-sub">ARIEL vs PABLO</div><canvas id="cRetiros"></canvas></div>
+      <div class="card"><div class="card-title">Total retirado</div><div class="card-sub">Proporción por socio</div><canvas id="cPropor"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Todos los retiros</div>
+      <div class="card-sub" style="margin-bottom:12px">Historial completo</div>
+      <div class="table-wrap">
+        <table><thead><tr><th>#</th><th>Concepto</th><th>Socio</th><th class="num">Monto</th></tr></thead>
+        <tbody id="tRetiros"></tbody>
+        <tfoot id="tFoot"></tfoot></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Detalle por período</div>
+      <div class="card-sub" style="margin-bottom:16px">Movimientos completos — ingresos, gastos y retiros</div>
+      <div class="bloques" id="bloques"></div>
     </div>
   </div>
-
-</div>
-
 </main>
 
 <script>
-const SOCIO_COLORS = {pablo:'#4f8cff', ariel:'#2dd4ac', ema:'#f97316'};
+const SERVER = window.location.hostname==='localhost'?'http://localhost:8765':'';
 let DATA = null;
 const charts = {};
-
-// ── DRIVE LOADING ──
-const SERVER = window.location.hostname==='localhost'?'http://localhost:8765':'';
-const RETIROS_FILENAME = 'RESUMEN_RETIROS.xlsx';
 
 async function loadFromDrive() {
   document.getElementById('loadingState').style.display='block';
   document.getElementById('errorState').style.display='none';
   document.getElementById('dashboard').style.display='none';
-
   try {
-    // Get file list from server
     const res = await fetch(`${SERVER}/api/files`);
-    if (!res.ok) throw new Error('No se pudo conectar al servidor');
+    if(!res.ok) throw new Error('No se pudo conectar al servidor');
     const files = await res.json();
-
-    // Find RESUMEN_RETIROS.xlsx
-    const file = files.find(f => f.name.toUpperCase().includes('RESUMEN_RETIROS'));
-    if (!file) throw new Error('No se encontró RESUMEN_RETIROS.xlsx en Drive');
-
-    // Download it
+    const file = files.find(f=>f.name.toUpperCase().includes('RESUMEN_RETIROS'));
+    if(!file) throw new Error('No se encontró RESUMEN_RETIROS.xlsx en Drive');
     const dlRes = await fetch(`${SERVER}/planillas/${encodeURIComponent(file.id||file.name)}`);
-    if (!dlRes.ok) throw new Error('No se pudo descargar el archivo');
+    if(!dlRes.ok) throw new Error('No se pudo descargar el archivo');
     const buf = await dlRes.arrayBuffer();
-
-    const wb = XLSX.read(buf, {type:'array', cellDates:true});
-    const sheetName = wb.SheetNames.find(n => n === 'Hoja4') || wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+    const wb = XLSX.read(buf,{type:'array',cellDates:true});
+    const ws = wb.Sheets['Hoja1']||wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false});
     DATA = parseRetiros(rows);
-    if (!DATA || !DATA.semanas.length) throw new Error('No se encontraron datos de retiros en el archivo');
-
+    if(!DATA) throw new Error('No se encontraron datos en el archivo');
     document.getElementById('loadingState').style.display='none';
     document.getElementById('dashboard').style.display='block';
     render();
   } catch(e) {
     document.getElementById('loadingState').style.display='none';
     document.getElementById('errorState').style.display='block';
-    document.getElementById('errorMsg').textContent = e.message;
+    document.getElementById('errorMsg').textContent=e.message;
   }
 }
 
-// ── PARSER ──
 function parseRetiros(rows) {
-  // Find the row with RETIROS EMA / RETIROS PABLO / RETIROS ARIEL
-  let headerRow = -1;
-  let colEma = -1, colPablo = -1, colAriel = -1, colSemana = -1;
+  const bloques = [];
+  let current = null;
 
-  for (let r = 0; r < rows.length; r++) {
-    const row = rows[r] || [];
-    const rowStr = row.map(v => String(v||'').toUpperCase());
-    if (rowStr.some(v => v.includes('RETIROS EMA') || v.includes('RETIROS PABLO'))) {
-      headerRow = r;
-      rowStr.forEach((v, i) => {
-        if (v.includes('RETIROS EMA')) colEma = i;
-        if (v.includes('RETIROS PABLO')) colPablo = i;
-        if (v.includes('RETIROS ARIEL')) colAriel = i;
-      });
-      colSemana = 0;
-      break;
+  rows.forEach((row, i) => {
+    const col11 = row[10]; // Q
+    const col12 = row[11]; // R
+    if(col11===null&&col12===null) return;
+
+    const label = String(col11||'').trim();
+    const labelU = label.toUpperCase();
+    const valor = parseFloat(String(col12||'0').replace(/[^0-9.-]/g,''))||0;
+
+    if(labelU.includes('SALDO ANTERIOR')){
+      current = {saldo_ant:valor, movimientos:[], socio:null, saldo_final:null, fila:i+1};
+      return;
     }
-  }
+    if(current){
+      if(labelU.includes('TIENE ARIEL')||labelU.includes('TIENE PABLO')){
+        current.socio = labelU.includes('ARIEL')?'ARIEL':'PABLO';
+        current.saldo_final = valor;
+        bloques.push(current);
+        current = null;
+      } else if(label && col12!==null) {
+        const isDate = label.match(/^\d{4}-\d{2}-\d{2}/)||col11 instanceof Date;
+        const tipo = labelU.includes('RETIRO')?'retiro':
+                     labelU.includes('DEVOLUCION')||labelU.includes('DEVOLUCIÓN')?'devolucion':
+                     valor<0?'gasto':'ingreso';
+        current.movimientos.push({
+          concepto: isDate ? formatDate(col11) : label,
+          monto: valor,
+          tipo,
+          isDate: !!isDate
+        });
+      }
+    }
+  });
 
-  if (headerRow < 0) return null;
+  if(!bloques.length) return null;
 
-  const semanas = [];
-  for (let r = headerRow + 1; r < rows.length; r++) {
-    const row = rows[r] || [];
-    const label = String(row[colSemana] || '').trim();
-    if (!label || !label.toLowerCase().includes('semana')) continue;
+  // Collect all retiros across bloques
+  const retiros = [];
+  bloques.forEach(b=>{
+    b.movimientos.forEach(m=>{
+      if(m.tipo==='retiro'){
+        retiros.push({concepto:m.concepto, socio:b.socio, monto:Math.abs(m.monto)});
+      }
+    });
+  });
 
-    const pablo = parseNum(row[colPablo]);
-    const ariel = parseNum(row[colAriel]);
-    const ema   = parseNum(row[colEma]);
-    if (pablo === 0 && ariel === 0 && ema === 0) continue;
+  const totAriel = retiros.filter(r=>r.socio==='ARIEL').reduce((s,r)=>s+r.monto,0);
+  const totPablo = retiros.filter(r=>r.socio==='PABLO').reduce((s,r)=>s+r.monto,0);
+  const saldoAriel = bloques.filter(b=>b.socio==='ARIEL').at(-1)?.saldo_final||0;
+  const saldoPablo = bloques.filter(b=>b.socio==='PABLO').at(-1)?.saldo_final||0;
 
-    semanas.push({ label: label.replace('semana del ', '').trim(), pablo, ariel, ema,
-                   total: pablo + ariel + ema });
-  }
-
-  // Also try to find totals row (row after last semana with no label)
-  const totals = { pablo:0, ariel:0, ema:0 };
-  semanas.forEach(s => { totals.pablo+=s.pablo; totals.ariel+=s.ariel; totals.ema+=s.ema; });
-
-  return { semanas, totals };
+  return {bloques, retiros, totAriel, totPablo, saldoAriel, saldoPablo};
 }
 
-function parseNum(v) {
-  if (v === null || v === undefined || v === '') return 0;
-  const n = parseFloat(String(v).replace(/[^0-9.-]/g,''));
-  return isNaN(n) ? 0 : Math.abs(n);
+function formatDate(v){
+  if(!v) return '';
+  const d = v instanceof Date ? v : new Date(v);
+  if(isNaN(d)) return String(v);
+  return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
-// ── RENDER ──
-function render() {
-  if (!DATA) return;
-  renderSocioCards();
+function render(){
+  if(!DATA) return;
+  renderKPIs();
   renderCharts();
-  renderTable();
+  renderTablaRetiros();
+  renderBloques();
 }
 
-function renderSocioCards() {
-  const { semanas, totals } = DATA;
-  const grandTotal = totals.pablo + totals.ariel + totals.ema;
-  const avgPablo = totals.pablo / semanas.length;
-  const avgAriel = totals.ariel / semanas.length;
-  const avgEma   = totals.ema   / semanas.length;
-
-  document.getElementById('socioCards').innerHTML = [
-    { name:'Pablo', key:'pablo', total:totals.pablo, avg:avgPablo, color:'pablo' },
-    { name:'Ariel', key:'ariel', total:totals.ariel, avg:avgAriel, color:'ariel' },
-    { name:'Ema',   key:'ema',   total:totals.ema,   avg:avgEma,   color:'ema'   },
-  ].map(s => `
-    <div class="socio-card ${s.color}">
-      <div class="socio-name">${s.name}</div>
-      <div class="socio-total">$${fmt(s.total)}</div>
-      <div class="socio-semanas">${semanas.length} semanas · ${((s.total/grandTotal)*100).toFixed(1)}% del total</div>
-      <div class="socio-avg">Promedio semanal: $${fmt(s.avg)}</div>
-    </div>`).join('');
+function renderKPIs(){
+  const {totAriel,totPablo,saldoAriel,saldoPablo,retiros} = DATA;
+  document.getElementById('kpiRow').innerHTML=[
+    {l:'Total retirado ARIEL',v:'$'+fmt(totAriel),s:retiros.filter(r=>r.socio==='ARIEL').length+' retiros',cls:'ariel'},
+    {l:'Total retirado PABLO',v:'$'+fmt(totPablo),s:retiros.filter(r=>r.socio==='PABLO').length+' retiros',cls:'pablo'},
+    {l:'Total general',v:'$'+fmt(totAriel+totPablo),s:'ambos socios',cls:'total'},
+    {l:'Saldo actual ARIEL',v:'$'+fmt(Math.abs(saldoAriel)),s:saldoAriel>=0?'a favor':'deudor',cls:'saldo-ariel'},
+    {l:'Saldo actual PABLO',v:'$'+fmt(Math.abs(saldoPablo)),s:saldoPablo>=0?'a favor':'deudor',cls:'saldo-pablo'},
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
 }
 
-function renderCharts() {
-  const { semanas, totals } = DATA;
-  const labels = semanas.map(s => s.label);
+function renderCharts(){
+  const {bloques,totAriel,totPablo} = DATA;
 
-  // Chart 1: retiros por semana
-  if (charts.semanal) charts.semanal.destroy();
-  charts.semanal = new Chart(document.getElementById('cSemanal').getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label:'Pablo', data:semanas.map(s=>s.pablo), backgroundColor:hexA('#4f8cff',.75), borderRadius:4, borderWidth:0 },
-        { label:'Ariel', data:semanas.map(s=>s.ariel), backgroundColor:hexA('#2dd4ac',.75), borderRadius:4, borderWidth:0 },
-        { label:'Ema',   data:semanas.map(s=>s.ema),   backgroundColor:hexA('#f97316',.75), borderRadius:4, borderWidth:0 },
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:true,
-      plugins:{legend:{display:true,labels:{color:'#8a96b8',boxWidth:12,font:{size:11}}},
-        tooltip:{backgroundColor:'#1e2438',borderColor:'#252d45',borderWidth:1,
-          callbacks:{label:ctx=>` $${fmt(ctx.parsed.y)}`}}},
-      scales:{
-        x:{grid:{color:'rgba(37,45,69,.4)'},ticks:{color:'#5d6a8a',font:{size:10},maxRotation:45}},
-        y:{grid:{color:'rgba(37,45,69,.4)'},ticks:{color:'#5d6a8a',font:{size:10},callback:v=>'$'+fmt(v)}}
-      }
-    }
+  // Chart 1: retiros por bloque
+  if(charts.ret) charts.ret.destroy();
+  const bloqAriel = bloques.filter(b=>b.socio==='ARIEL');
+  const bloqPablo = bloques.filter(b=>b.socio==='PABLO');
+  const allBloques = [...bloques];
+  const labels = allBloques.map((b,i)=>`Período ${i+1} (${b.socio})`);
+  const dataRet = allBloques.map(b=>Math.abs(b.movimientos.filter(m=>m.tipo==='retiro').reduce((s,m)=>s+m.monto,0)));
+  const colors = allBloques.map(b=>b.socio==='ARIEL'?'rgba(45,212,172,.75)':'rgba(79,140,255,.75)');
+
+  charts.ret = new Chart(document.getElementById('cRetiros').getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Retiro',data:dataRet,backgroundColor:colors,borderRadius:5,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e2438',borderColor:'#252d45',borderWidth:1,callbacks:{label:ctx=>` $${fmt(ctx.parsed.y)}`}}},
+      scales:{x:{grid:{color:'rgba(37,45,69,.4)'},ticks:{color:'#5d6a8a',font:{size:10}}},
+              y:{grid:{color:'rgba(37,45,69,.4)'},ticks:{color:'#5d6a8a',font:{size:10},callback:v=>'$'+fmt(v)}}}}
   });
 
-  // Chart 2: proporción total
-  if (charts.propor) charts.propor.destroy();
-  charts.propor = new Chart(document.getElementById('cPropor').getContext('2d'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Pablo','Ariel','Ema'],
-      datasets: [{
-        data: [totals.pablo, totals.ariel, totals.ema],
-        backgroundColor: ['#4f8cff','#2dd4ac','#f97316'],
-        borderWidth: 0, hoverOffset: 8
-      }]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:true,
-      plugins:{
-        legend:{position:'bottom',labels:{color:'#8a96b8',boxWidth:12,padding:14,font:{size:11}}},
-        tooltip:{backgroundColor:'#1e2438',borderColor:'#252d45',borderWidth:1,
-          callbacks:{label:ctx=>{
-            const v=ctx.parsed;
-            const total=totals.pablo+totals.ariel+totals.ema;
-            return ` $${fmt(v)} (${((v/total)*100).toFixed(1)}%)`;
-          }}}
-      }
+  // Chart 2: proporción
+  if(charts.prop) charts.prop.destroy();
+  charts.prop = new Chart(document.getElementById('cPropor').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['ARIEL','PABLO'],datasets:[{data:[totAriel,totPablo],backgroundColor:['#2dd4ac','#4f8cff'],borderWidth:0,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom',labels:{color:'#8a96b8',boxWidth:12,padding:14,font:{size:11}}},
+               tooltip:{backgroundColor:'#1e2438',borderColor:'#252d45',borderWidth:1,callbacks:{label:ctx=>{const t=totAriel+totPablo;return ` $${fmt(ctx.parsed)} (${((ctx.parsed/t)*100).toFixed(1)}%)`;}}}}
     }
   });
 }
 
-function renderTable() {
-  const { semanas, totals } = DATA;
-  const tbody = document.getElementById('tBody');
-  const tfoot = document.getElementById('tFoot');
-
-  tbody.innerHTML = semanas.map(s => {
-    const mayor = Math.max(s.pablo, s.ariel, s.ema);
-    const mayorNombre = s.pablo===mayor?'pablo':s.ariel===mayor?'ariel':'ema';
-    return `<tr>
-      <td>${s.label}</td>
-      <td class="num" style="color:var(--pablo)">${s.pablo>0?'$'+fmt(s.pablo):'—'}</td>
-      <td class="num" style="color:var(--ariel)">${s.ariel>0?'$'+fmt(s.ariel):'—'}</td>
-      <td class="num" style="color:var(--ema)">${s.ema>0?'$'+fmt(s.ema):'—'}</td>
-      <td class="num">$${fmt(s.total)}</td>
-      <td><span class="chip ${mayorNombre}">${mayorNombre.charAt(0).toUpperCase()+mayorNombre.slice(1)} $${fmt(mayor)}</span></td>
+function renderTablaRetiros(){
+  const {retiros,totAriel,totPablo} = DATA;
+  document.getElementById('tRetiros').innerHTML = retiros.map((r,i)=>`
+    <tr>
+      <td style="color:var(--mu)">${i+1}</td>
+      <td>${r.concepto}</td>
+      <td><span class="chip ${r.socio.toLowerCase()}">${r.socio}</span></td>
+      <td class="num" style="color:var(--a5);font-weight:600">$${fmt(r.monto)}</td>
+    </tr>`).join('');
+  document.getElementById('tFoot').innerHTML=`
+    <tr style="border-top:2px solid var(--bd)">
+      <td colspan="2"><strong>TOTAL</strong></td>
+      <td></td>
+      <td class="num"><strong>$${fmt(totAriel+totPablo)}</strong></td>
     </tr>`;
+}
+
+function renderBloques(){
+  const {bloques} = DATA;
+  document.getElementById('bloques').innerHTML = bloques.map((b,i)=>{
+    const cls = b.socio?.toLowerCase()||'';
+    const ingresos = b.movimientos.filter(m=>m.tipo==='ingreso'&&m.isDate).reduce((s,m)=>s+m.monto,0);
+    const gastos = b.movimientos.filter(m=>m.tipo==='gasto'||m.tipo==='devolucion').reduce((s,m)=>s+m.monto,0);
+    const retiros = b.movimientos.filter(m=>m.tipo==='retiro').reduce((s,m)=>s+m.monto,0);
+
+    const movRows = b.movimientos.map(m=>{
+      const isNeg = m.monto < 0;
+      const rowCls = m.tipo==='retiro'?'retiro':isNeg?'gasto':'ingreso';
+      const lblCls = m.tipo==='retiro'?'retiro-label':'';
+      return `<div class="mov-row ${rowCls}">
+        <span class="mov-concepto ${lblCls}">${m.concepto}</span>
+        <span class="mov-monto ${isNeg?'neg':'pos'}">${isNeg?'-':'+'} $${fmt(Math.abs(m.monto))}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="bloque">
+      <div class="bloque-header ${cls}">
+        <div>
+          <div class="bloque-socio ${cls}">${b.socio||'—'} · Período ${i+1}</div>
+          <div class="bloque-periodo">Saldo ant: $${fmt(b.saldo_ant)} · Ing: $${fmt(ingresos)} · Gastos: $${fmt(Math.abs(gastos))} · Retiros: $${fmt(Math.abs(retiros))}</div>
+        </div>
+        <div class="bloque-saldo ${b.saldo_final>=0?'pos':'neg'}">$${fmt(Math.abs(b.saldo_final||0))}</div>
+      </div>
+      <div class="saldo-ant-row"><span>Saldo anterior</span><span>$${fmt(b.saldo_ant)}</span></div>
+      ${movRows}
+      <div class="saldo-fin-row" style="color:${b.socio==='ARIEL'?'var(--ariel)':'var(--pablo)'}">
+        <span>TIENE ${b.socio}</span>
+        <span>$${fmt(b.saldo_final||0)}</span>
+      </div>
+    </div>`;
   }).join('');
-
-  const grandTotal = totals.pablo + totals.ariel + totals.ema;
-  tfoot.innerHTML = `<tr style="border-top:2px solid var(--bd)">
-    <td><strong>TOTAL</strong></td>
-    <td class="num" style="color:var(--pablo)"><strong>$${fmt(totals.pablo)}</strong></td>
-    <td class="num" style="color:var(--ariel)"><strong>$${fmt(totals.ariel)}</strong></td>
-    <td class="num" style="color:var(--ema)"><strong>$${fmt(totals.ema)}</strong></td>
-    <td class="num"><strong>$${fmt(grandTotal)}</strong></td>
-    <td></td>
-  </tr>`;
 }
 
-// Auto-load on page start
+function fmt(n){if(!n||isNaN(n))return'0';return Math.round(n).toLocaleString('es-AR');}
+
 loadFromDrive();
-
-// ── UTILS ──
-function fmt(n) {
-  if(!n||isNaN(n)) return '0';
-  return Math.round(n).toLocaleString('es-AR');
-}
-function hexA(hex,a){
-  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
 </script>
 </body>
 </html>
