@@ -264,7 +264,7 @@ async function refreshFileList() {
   try {
     const res = await fetch(`${SERVER}/api/files`);
     if(!res.ok) throw new Error('sin respuesta');
-    S.available = await res.json();
+    S.available = (await res.json()).filter(f => !f.name.toUpperCase().includes('RESUMEN_RETIROS'));
     renderSidebar();
     document.getElementById('sbStatus').textContent =
       S.available.length===0?'Sin archivos en Drive':
