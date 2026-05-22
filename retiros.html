@@ -57,6 +57,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .tag.ing{background:rgba(45,212,172,.12);color:var(--a3)}
 .tag.gas{background:rgba(249,115,22,.12);color:var(--a4)}
 .tag.inv{background:rgba(124,92,252,.12);color:#a78bfa}
+.tag.neu{background:rgba(250,204,21,.12);color:#facc15}
+.tag.neg{background:rgba(244,63,94,.12);color:var(--a5)}
 /* SEARCH */
 .search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .search{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;font-size:.8rem;color:var(--tx);font-family:inherit;outline:none;width:220px;transition:border-color .2s}
@@ -86,6 +88,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <!-- KPIs -->
     <div class="kpis" id="kpiRow"></div>
 
+    <!-- RESUMEN GRUPOS -->
+    <div class="g2" id="gruposRow" style="margin-bottom:18px"></div>
+
     <!-- CHARTS -->
     <div class="g2">
       <div class="card">
@@ -112,9 +117,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <input type="text" class="search" id="movSearch" placeholder="Buscar concepto…" oninput="renderMovTable()">
         <select class="filter-sel" id="movFilter" onchange="renderMovTable()">
           <option value="">Todos</option>
-          <option value="ing">Solo ingresos</option>
-          <option value="gas">Solo egresos</option>
-          <option value="inv">Solo inversiones</option>
+          <option value="ingreso_caja">Ingresos caja</option>
+          <option value="nuevo_local">Nuevo local Manantiales</option>
+          <option value="gastos_generales">Gastos generales</option>
+          <option value="faltante_caja">Faltante de caja</option>
+          <option value="mov_socios">Movimientos entre socios</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -190,20 +197,36 @@ function parseData(rows){
         return;
       }
 
-      // Tipo
-      let tipo, concepto;
+      // Tipo y grupo
+      let tipo, concepto, grupo;
       if(lbl instanceof Date || (typeof lbl==='string'&&lbl.match(/^\d{4}-\d{2}-\d{2}/))){
         tipo = monto >= 0 ? 'ing' : 'gas';
         concepto = lbl instanceof Date ? fmtDate(lbl) : label;
+        grupo = monto >= 0 ? 'ingreso_caja' : 'gastos_generales';
       } else if(label){
-        // Investment keywords
-        const invKeys = ['local manantiales','cuota','ampliacion','ampliación','campana','panel','solar','extractor','freidora','freezer','frezzer','heladera','mano de obra','materiales','hierros','pasatecho','tubos','puerta','mesa'];
-        tipo = invKeys.some(k=>labelU.includes(k.toUpperCase())) ? 'inv' : monto>=0?'ing':'gas';
         concepto = label;
+        // Clasificar por grupo
+        if(labelU.includes('MANANTIALES')||labelU.includes('AMPLIACION')||labelU.includes('AMPLIACIÓN')||
+           labelU.includes('CAMPANA')||labelU.includes('PANEL')||labelU.includes('EXTRACTOR')||
+           labelU.includes('FREIDORA')||labelU.includes('FREZZER')||labelU.includes('FREEZER')||
+           labelU.includes('HELADERA')||labelU.includes('MANO DE OBRA')||labelU.includes('MATERIALES')||
+           labelU.includes('HIERROS')||labelU.includes('PASATECHO')||labelU.includes('TUBOS')||
+           labelU.includes('PUERTA CHAPA')||labelU.includes('MESA C/BACHA')||labelU.includes('CAÑOS')||
+           labelU.includes('SEÑA')||labelU.includes('SALDO CAMPANA')||labelU.includes('FLETE CAMPANA')||
+           labelU.includes('SALDO TAPA')||labelU.includes('PANELES DOCTA')){
+          tipo = 'inv'; grupo = 'nuevo_local';
+        } else if(labelU.includes('FALTANTE CAJA')||labelU.includes('FALTANTE DE CAJA')){
+          tipo = 'gas'; grupo = 'faltante_caja';
+        } else if(labelU.includes('MOVIMIENTO ENTRE CAJAS')||labelU.includes('MOVIMIENTO ENTRE SOCIOS')){
+          tipo = monto>=0?'ing':'gas'; grupo = 'mov_socios';
+        } else {
+          tipo = monto>=0?'ing':'gas';
+          grupo = monto>=0?'ingreso_caja':'gastos_generales';
+        }
       } else return;
 
       if(monto===0) return;
-      movs.push({concepto, monto, tipo});
+      movs.push({concepto, monto, tipo, grupo: grupo||tipo});
     });
 
     // Calculate running balance
@@ -215,7 +238,15 @@ function parseData(rows){
     const totalInv = movs.filter(m=>m.tipo==='inv').reduce((s,m)=>s+m.monto,0);
     const saldoFinal = saldoInicial + totalIng + totalEgr;
 
-    return {saldoInicial, movs, totalIng, totalEgr: Math.abs(totalEgr), totalInv: Math.abs(totalInv), saldoFinal};
+    // Group totals
+    const grupos = {};
+    movs.forEach(m=>{
+      if(!grupos[m.grupo]) grupos[m.grupo]={total:0,count:0};
+      grupos[m.grupo].total += m.monto;
+      grupos[m.grupo].count++;
+    });
+
+    return {saldoInicial, movs, totalIng, totalEgr: Math.abs(totalEgr), totalInv: Math.abs(totalInv), saldoFinal, grupos};
   }
 
   const pablo = parseSocio(rows, 0, 1);
@@ -234,8 +265,45 @@ function fmtDate(d){
 // ── RENDER ──
 function render(){
   renderKPIs();
+  renderGrupos();
   renderCharts();
   renderMovTable();
+}
+
+function renderGrupos(){
+  const {pablo,ariel} = DATA;
+  const GRUPOS = [
+    {key:'ingreso_caja',   label:'Ingresos caja',          cls:'ing', icon:'📥'},
+    {key:'nuevo_local',    label:'Nuevo local Manantiales', cls:'inv', icon:'🏗️'},
+    {key:'gastos_generales',label:'Gastos generales',       cls:'gas', icon:'🧾'},
+    {key:'faltante_caja',  label:'Faltante de caja',        cls:'neg', icon:'⚠️'},
+    {key:'mov_socios',     label:'Movim. entre socios',     cls:'neu', icon:'🔄'},
+  ];
+  const colors = {ing:'var(--a3)',inv:'#a78bfa',gas:'var(--a4)',neg:'var(--a5)',neu:'#facc15'};
+
+  document.getElementById('gruposRow').innerHTML = GRUPOS.map(g=>{
+    const pv = pablo.grupos[g.key]?.total||0;
+    const av = ariel.grupos[g.key]?.total||0;
+    const pc = pablo.grupos[g.key]?.count||0;
+    const ac = ariel.grupos[g.key]?.count||0;
+    if(pv===0&&av===0) return '';
+    return `<div class="card" style="margin-bottom:0;border-top:2px solid ${colors[g.cls]}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span>${g.icon}</span>
+        <div class="card-title" style="margin-bottom:0">${g.label}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--s2);border-radius:8px;padding:10px">
+          <div style="font-size:.65rem;color:var(--mu);margin-bottom:4px">PABLO (${pc} movs)</div>
+          <div style="font-family:Syne,sans-serif;font-size:1rem;font-weight:700;color:${pv>=0?'var(--a3)':'var(--a5)'}">$${fmt(Math.abs(pv))}</div>
+        </div>
+        <div style="background:var(--s2);border-radius:8px;padding:10px">
+          <div style="font-size:.65rem;color:var(--mu);margin-bottom:4px">ARIEL (${ac} movs)</div>
+          <div style="font-family:Syne,sans-serif;font-size:1rem;font-weight:700;color:${av>=0?'var(--a3)':'var(--a5)'}">$${fmt(Math.abs(av))}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderKPIs(){
@@ -311,15 +379,22 @@ function renderMovTable(){
 
   let movs = data.movs;
   if(q) movs = movs.filter(m=>m.concepto.toLowerCase().includes(q));
-  if(filter) movs = movs.filter(m=>m.tipo===filter);
+  if(filter) movs = movs.filter(m=>m.grupo===filter);
 
   const tbody = document.getElementById('movBody');
   tbody.innerHTML = movs.map(m=>{
     const isPos = m.monto >= 0;
-    const tagLabel = m.tipo==='ing'?'Ingreso':m.tipo==='inv'?'Inversión':'Egreso';
+    const grupoLabel = {
+      'ingreso_caja':'Ingreso caja','nuevo_local':'Nuevo local','gastos_generales':'Gasto general',
+      'faltante_caja':'Faltante caja','mov_socios':'Mov. socios'
+    }[m.grupo]||'Otro';
+    const grupoClass = {
+      'ingreso_caja':'ing','nuevo_local':'inv','gastos_generales':'gas',
+      'faltante_caja':'neg','mov_socios':'neu'
+    }[m.grupo]||'gas';
     return `<tr>
       <td>${m.concepto}</td>
-      <td><span class="tag ${m.tipo}">${tagLabel}</span></td>
+      <td><span class="tag ${grupoClass}">${grupoLabel}</span></td>
       <td class="num ${isPos?'pos':'neg'}">${isPos?'+':''} $${fmt(Math.abs(m.monto))}</td>
       <td class="num" style="color:${m.saldo>=0?'var(--a3)':'var(--a5)'};font-weight:500">$${fmt(m.saldo)}</td>
     </tr>`;
