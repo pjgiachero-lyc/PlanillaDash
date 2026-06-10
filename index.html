@@ -6,9 +6,11 @@
 <title>Limón y Chimi</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
 :root{--bg:#0b0e15;--s1:#111520;--s2:#181d2e;--s3:#1e2438;--bd:#252d45;--a1:#4f8cff;--a2:#7c5cfc;--a3:#2dd4ac;--a4:#f97316;--a5:#f43f5e;--tx:#dde4f5;--mu:#5d6a8a}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex;align-items:center;justify-content:center}
+
 .login-wrap{width:100%;max-width:420px;padding:24px}
 .logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;text-align:center;margin-bottom:8px}
 .logo em{color:var(--a1);font-style:normal}
@@ -22,6 +24,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 .btn-login{width:100%;background:var(--a1);color:#fff;border:none;border-radius:10px;padding:13px;font-size:1rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.3px;transition:opacity .2s;margin-top:6px}
 .btn-login:hover{opacity:.85}
 .error{color:var(--a5);font-size:.8rem;text-align:center;margin-top:10px;min-height:18px}
+
 .menu-wrap{display:none;width:100%;max-width:500px;padding:24px}
 .menu-logo{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;text-align:center;margin-bottom:6px}
 .menu-logo em{color:var(--a1);font-style:normal}
@@ -34,6 +37,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
 .menu-card .info p{font-size:.78rem;color:var(--mu);line-height:1.5}
 .menu-card .arrow{margin-left:auto;color:var(--mu);font-size:1.2rem;transition:transform .2s}
 .menu-card:hover .arrow{transform:translateX(4px);color:var(--a1)}
+
 .logout{display:flex;justify-content:center;margin-top:24px}
 .btn-logout{background:transparent;border:1px solid var(--bd);color:var(--mu);border-radius:8px;padding:8px 20px;font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s}
 .btn-logout:hover{color:var(--a5);border-color:var(--a5)}
@@ -61,6 +65,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
   <div class="menu-logo">Limón y<em> Chimi</em></div>
   <div class="menu-sub">¿Qué querés ver?</div>
   <div class="menu-cards">
+
     <a class="menu-card" href="/ventas.html">
       <div class="icon">📊</div>
       <div class="info">
@@ -69,6 +74,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
       </div>
       <div class="arrow">→</div>
     </a>
+
     <a class="menu-card" href="/gastos.html">
       <div class="icon">💸</div>
       <div class="info">
@@ -77,6 +83,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
       </div>
       <div class="arrow">→</div>
     </a>
+
     <a class="menu-card" href="/retiros.html">
       <div class="icon">💼</div>
       <div class="info">
@@ -85,6 +92,16 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tx)
       </div>
       <div class="arrow">→</div>
     </a>
+
+    <a class="menu-card" href="/categorizador.html">
+      <div class="icon">🏷️</div>
+      <div class="info">
+        <h3>Categorizador de Gastos</h3>
+        <p>Cargá el resumen bancario, categorizá los movimientos y exportá el CSV</p>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+
   </div>
   <div class="logout">
     <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
@@ -118,7 +135,6 @@ function showMenu() {
   document.getElementById('menuWrap').style.display = 'block';
 }
 
-// Auto-show menu if already logged in
 if (localStorage.getItem('lyc_auth') === '1') showMenu();
 </script>
 </body>
